@@ -13,15 +13,23 @@ ConvergedRadiusTableSearchNode::ConvergedRadiusTableSearchNode()
 }
 
 void ConvergedRadiusTableSearchNode::initSubcription() {
-  sub_ekf_pose_ = create_subscription<geometry_msgs::msg::PoseStamped>(
+  sub_ekf_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
       "/localization/pose_twist_fusion_filter/pose", 1,
       std::bind(&ConvergedRadiusTableSearchNode::ekfPoseCb, this,
                 std::placeholders::_1));
 
-  sub_pointcloud_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+  sub_pointcloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "/localization/util/downsample/pointcloud", 1,
       std::bind(&ConvergedRadiusTableSearchNode::pointcloudCb, this,
                 std::placeholders::_1));
+}
+
+void ConvergedRadiusTableSearchNode::setParam() {
+  this->declare_parameter("csv_tabele_path", "");
+}
+
+void ConvergedRadiusTableSearchNode::getParam() {
+  csv_path_ = this->get_parameter("csv_tabele_path").as_string();
 }
 
 void ConvergedRadiusTableSearchNode::ekfPoseCb(

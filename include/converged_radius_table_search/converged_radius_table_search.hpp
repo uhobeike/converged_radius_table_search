@@ -22,6 +22,8 @@ public:
 
 protected:
   void initSubcription();
+  void setParam();
+  void getParam();
   void ekfPoseCb(geometry_msgs::msg::PoseStamped::ConstSharedPtr msg);
   void pointcloudCb(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
   void readCsv();
