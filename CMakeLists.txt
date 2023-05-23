@@ -10,10 +10,15 @@ find_package(eigen3_cmake_module)
 find_package(Eigen3)
 
 ament_auto_find_build_dependencies()
+find_package(PCL REQUIRED COMPONENTS common io registration)
+include_directories(${PCL_INCLUDE_DIRS})
 
 ament_auto_add_executable(converged_radius_table_search
   src/converged_radius_table_search.cpp
 )
+
+link_directories(${PCL_LIBRARY_DIRS})
+target_link_libraries(converged_radius_table_search ${PCL_LIBRARIES})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

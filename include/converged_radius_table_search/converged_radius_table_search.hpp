@@ -21,7 +21,7 @@ public:
   ConvergedRadiusTableSearchNode();
 
 protected:
-  void initSubcription();
+  void initPubSub();
   void setParam();
   void getParam();
   void ekfPoseCb(geometry_msgs::msg::PoseStamped::ConstSharedPtr msg);
@@ -35,7 +35,10 @@ protected:
   double findClosestPoseAndIdentifyConvergenceRadius(
       geometry_msgs::msg::PoseStamped target_pose);
 
+  void publishCloud();
+
 private:
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_cloud_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
       sub_ekf_pose_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr
