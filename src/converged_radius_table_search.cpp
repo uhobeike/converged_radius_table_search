@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <Eigen/Dense>
+#include <chrono>
 
 #include "converged_radius_table_search/converged_radius_table_search.hpp"
 
@@ -42,10 +43,19 @@ void ConvergedRadiusTableSearchNode::ekfPoseCb(
 
 void ConvergedRadiusTableSearchNode::pointcloudCb(
     sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) {
+
+  auto start = std::chrono::high_resolution_clock::now();
+
   auto pose = findClosestPoseStamped(msg->header);
   auto converge_radius = findClosestPoseAndIdentifyConvergenceRadius(pose);
 
+  auto end = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+
+  RCLCPP_INFO(get_logger(), "Exe time: %f ms", elapsed.count());
   RCLCPP_INFO(get_logger(), "Converge Radius: %f", converge_radius);
+  std::cout << "\n";
 }
 
 void ConvergedRadiusTableSearchNode::readCsv() {
