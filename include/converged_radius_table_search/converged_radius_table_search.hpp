@@ -4,6 +4,8 @@
 #ifndef CONVERGED_RADIUS_TABLE_SEARCH__CONVERGED_RADIUS_TABLE_SEARCH_HPP_
 #define CONVERGED_RADIUS_TABLE_SEARCH__CONVERGED_RADIUS_TABLE_SEARCH_HPP_
 
+#include <fstream>
+#include <map>
 #include <queue>
 
 #include <rclcpp/rclcpp.hpp>
@@ -20,11 +22,18 @@ public:
 
 protected:
   void initSubcription();
+  void setParam();
+  void getParam();
   void ekfPoseCb(geometry_msgs::msg::PoseStamped::ConstSharedPtr msg);
   void pointcloudCb(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
+  void readCsv();
 
-  rclcpp::Time findClosestTimestamp(std_msgs::msg::Header target);
+  geometry_msgs::msg::PoseStamped
+  findClosestPoseStamped(std_msgs::msg::Header target);
   void eraseEkfPoseQueue();
+
+  double findClosestPoseAndIdentifyConvergenceRadius(
+      geometry_msgs::msg::PoseStamped target_pose);
 
 private:
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
@@ -33,6 +42,10 @@ private:
       sub_pointcloud_;
 
   std::queue<geometry_msgs::msg::PoseStamped> ekf_pose_queue_;
+
+  std::shared_ptr<std::ifstream> file_;
+  std::string csv_path_;
+  std::vector<std::map<std::string, double>> csv_tabele_;
 };
 
 } // namespace converged_radius_table_search
