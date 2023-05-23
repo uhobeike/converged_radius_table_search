@@ -3,19 +3,25 @@
 
 #include <Eigen/Dense>
 #include <chrono>
+#include <pcl/filters/random_sample.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include "converged_radius_table_search/converged_radius_table_search.hpp"
 
 namespace converged_radius_table_search {
 ConvergedRadiusTableSearchNode::ConvergedRadiusTableSearchNode()
     : Node("converged_radius_table_search_node") {
-  initSubcription();
+  initPubSub();
   setParam();
   getParam();
   readCsv();
 }
 
-void ConvergedRadiusTableSearchNode::initSubcription() {
+void ConvergedRadiusTableSearchNode::initPubSub() {
+  pub_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/random_pointcloud", rclcpp::SensorDataQoS());
+
   sub_ekf_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
       "/localization/pose_twist_fusion_filter/pose", 1,
       std::bind(&ConvergedRadiusTableSearchNode::ekfPoseCb, this,
@@ -48,6 +54,32 @@ void ConvergedRadiusTableSearchNode::pointcloudCb(
 
   auto pose = findClosestPoseStamped(msg->header);
   auto converge_radius = findClosestPoseAndIdentifyConvergenceRadius(pose);
+
+  sensor_msgs::msg::PointCloud2 output_msg;
+
+  if (converge_radius >= 0.5) {
+    pcl::PCLPointCloud2 pcl_cloud;
+    pcl_conversions::toPCL(*msg, pcl_cloud);
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> temp_cloud(
+        new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::fromPCLPointCloud2(pcl_cloud, *temp_cloud);
+
+    pcl::RandomSample<pcl::PointXYZ> random_sample;
+    random_sample.setInputCloud(temp_cloud);
+    random_sample.setSample(750);
+    std::shared_ptr<pcl::PointCloud<pcl::PointXYZ>> cloud_filtered(
+        new pcl::PointCloud<pcl::PointXYZ>);
+    random_sample.filter(*cloud_filtered);
+
+    pcl::PCLPointCloud2 pcl_cloud_filtered;
+    pcl::toPCLPointCloud2(*cloud_filtered, pcl_cloud_filtered);
+    pcl_conversions::fromPCL(pcl_cloud_filtered, output_msg);
+    output_msg.header.frame_id = msg->header.frame_id;
+
+    pub_cloud_->publish(output_msg);
+  }
+
+  pub_cloud_->publish(*msg);
 
   auto end = std::chrono::high_resolution_clock::now();
 
