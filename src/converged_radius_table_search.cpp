@@ -9,6 +9,8 @@ namespace converged_radius_table_search {
 ConvergedRadiusTableSearchNode::ConvergedRadiusTableSearchNode()
     : Node("converged_radius_table_search_node") {
   initSubcription();
+  setParam();
+  getParam();
   readCsv();
 }
 
@@ -19,7 +21,8 @@ void ConvergedRadiusTableSearchNode::initSubcription() {
                 std::placeholders::_1));
 
   sub_pointcloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      "/localization/util/downsample/pointcloud", 1,
+      "/localization/util/downsample/pointcloud",
+      rclcpp::SensorDataQoS().keep_last(1),
       std::bind(&ConvergedRadiusTableSearchNode::pointcloudCb, this,
                 std::placeholders::_1));
 }
@@ -61,9 +64,9 @@ void ConvergedRadiusTableSearchNode::readCsv() {
 
     std::map<std::string, double> field_map;
     field_map.insert(std::make_pair("pose_x", std::stod(field_vec[0])));
-    field_map.insert(std::make_pair("pose_y", std::stod(field_vec[0])));
+    field_map.insert(std::make_pair("pose_y", std::stod(field_vec[1])));
     field_map.insert(
-        std::make_pair("converge_radius", std::stod(field_vec[0])));
+        std::make_pair("converge_radius", std::stod(field_vec[2])));
 
     csv_tabele_.push_back(field_map);
   }
@@ -74,22 +77,28 @@ void ConvergedRadiusTableSearchNode::readCsv() {
 geometry_msgs::msg::PoseStamped
 ConvergedRadiusTableSearchNode::findClosestPoseStamped(
     std_msgs::msg::Header target) {
-  rclcpp::Time target_time(target.stamp);
+  auto target_time = target.stamp.nanosec;
+  // RCLCPP_INFO(get_logger(), "findClosestPoseStamped start");
 
-  double duration_sec_old = INFINITY;
+  auto copy_ekf_pose_queue = ekf_pose_queue_;
+
+  double duration_sec_old = 0;
   while (!ekf_pose_queue_.empty()) {
-    rclcpp::Time ekf_pose_time(ekf_pose_queue_.front().header.stamp);
-    auto duration_sec_latest = (target_time - ekf_pose_time).seconds();
-
-    if (duration_sec_old != INFINITY) {
-      if (duration_sec_old > duration_sec_latest) {
+    auto ekf_pose_time = ekf_pose_queue_.front().header.stamp.nanosec;
+    auto duration_sec_latest = fabs(target_time - ekf_pose_time);
+    if (duration_sec_old != 0) {
+      if (duration_sec_old < duration_sec_latest) {
         eraseEkfPoseQueue();
         return ekf_pose_queue_.front();
-      } else
+      } else {
         ekf_pose_queue_.pop();
+        return copy_ekf_pose_queue.back();
+      }
     }
     duration_sec_old = duration_sec_latest;
   }
+
+  // RCLCPP_INFO(get_logger(), "findClosestPoseStamped end");
   return geometry_msgs::msg::PoseStamped();
 }
 
@@ -108,9 +117,13 @@ ConvergedRadiusTableSearchNode::findClosestPoseAndIdentifyConvergenceRadius(
     Eigen::Vector2d reference_mat(data["pose_x"], data["pose_y"]);
     l2_norm_vec.push_back((target_pose_mat - reference_mat).norm());
   }
+
   auto min_element_iter =
       std::min_element(l2_norm_vec.begin(), l2_norm_vec.end());
   int min_index = std::distance(l2_norm_vec.begin(), min_element_iter);
+
+  RCLCPP_INFO(get_logger(), "Index: %d", min_index);
+
   return csv_tabele_[min_index]["converge_radius"];
 }
 
