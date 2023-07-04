@@ -20,7 +20,8 @@ ConvergedRadiusTableSearchNode::ConvergedRadiusTableSearchNode()
 
 void ConvergedRadiusTableSearchNode::initPubSub() {
   pub_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "/random_pointcloud", rclcpp::SensorDataQoS());
+      "/localization/pose_estimator/random_pointcloud",
+      rclcpp::SensorDataQoS());
 
   sub_ekf_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
       "/localization/pose_twist_fusion_filter/pose", 1,
@@ -35,7 +36,9 @@ void ConvergedRadiusTableSearchNode::initPubSub() {
 }
 
 void ConvergedRadiusTableSearchNode::setParam() {
-  this->declare_parameter("csv_tabele_path", "");
+  // clang-format off
+  this->declare_parameter("csv_tabele_path", "/home/tatsuhiroikebe/rosbag/rosbag-replay-simulation/converged-radius-table-search-1/converged_radius_table.csv");
+  // clang-format on
 }
 
 void ConvergedRadiusTableSearchNode::getParam() {
